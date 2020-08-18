@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
 using System.Threading;
 using System.Windows.Forms;
 using RVIO;
@@ -14,11 +15,12 @@ namespace TrrntZipUI
 
     public partial class FrmTrrntzip : Form
     {
+        private delegate void StatusInvoker(int fileId, int processId, string filename);
+
         private readonly FileList _fileList;
         private readonly Counter _fileIndex = new Counter();
 
-        private readonly int _threadCount;
-        private readonly Stopwatch _sw = new Stopwatch();
+        private int _threadCount;
 
         private readonly List<Label> _threadLabel;
         private readonly List<ProgressBar> _threadProgress;
@@ -26,9 +28,15 @@ namespace TrrntZipUI
         private bool _working;
         private int _threadsBusyCount;
 
+        private bool UiUpdate = false;
+
         public FrmTrrntzip()
         {
+
+            UiUpdate = true;
             InitializeComponent();
+
+            this.Text = $"Trrntzip .Net ({Assembly.GetExecutingAssembly().GetName().Version.ToString(3)})";
             DropBox.AllowDrop = true;
             DropBox.DragEnter += PDragEnter;
             DropBox.DragDrop += PDragDrop;
@@ -48,31 +56,39 @@ namespace TrrntZipUI
             cboOutType.SelectedIndex = intVal;
 
             sval = AppSettings.ReadSetting("Force");
-            if (!int.TryParse(sval, out intVal))
-            {
-                intVal = 0;
-            }
-            chkForce.Checked = intVal == 1;
+            chkForce.Checked = sval=="True";
 
             sval = AppSettings.ReadSetting("Fix");
-            if (!int.TryParse(sval, out intVal))
-            {
-                intVal = 1;
-            }
-            chkFix.Checked = intVal == 1;
+            chkFix.Checked = sval!="False";
 
+            tbProccessors.Minimum = 1;
+            tbProccessors.Maximum = Environment.ProcessorCount;
+            sval = AppSettings.ReadSetting("ProcCount");
+            if (!int.TryParse(sval, out int procc))
+            {
+                procc = tbProccessors.Maximum;
+            }
+
+            if (procc > tbProccessors.Maximum)
+            {
+                procc = tbProccessors.Maximum;
+            }
+            
+            tbProccessors.Value = procc;
 
             _fileList = new FileList();
-            _threadCount = Environment.ProcessorCount;
-            //_threadCount = 1;
+
             _threadLabel = new List<Label>();
             _threadProgress = new List<ProgressBar>();
 
             SetUpUiThreads();
+            UiUpdate = false;
         }
 
         private void SetUpUiThreads()
         {
+            _threadCount = tbProccessors.Value;
+
             foreach (Label t in _threadLabel)
             {
                 StatusPanel.Controls.Remove(t);
@@ -85,31 +101,32 @@ namespace TrrntZipUI
             }
 
             _threadLabel.Clear();
+            _threadProgress.Clear();
             for (int i = 0; i < _threadCount; i++)
             {
                 Label pLabel = new Label();
                 _threadLabel.Add(pLabel);
                 pLabel.Visible = true;
                 pLabel.Left = 12;
-                pLabel.Top = 220 + 30*i;
+                pLabel.Top = 235 + 30 * i;
                 pLabel.Width = 225;
                 pLabel.Height = 15;
-                pLabel.Text = "";
+                pLabel.Text = $"Processor {i+1}";
                 StatusPanel.Controls.Add(pLabel);
 
                 ProgressBar pProgress = new ProgressBar();
                 _threadProgress.Add(pProgress);
                 pProgress.Visible = true;
                 pProgress.Left = 12;
-                pProgress.Top = 235 + 30*i;
+                pProgress.Top = 250 + 30 * i;
                 pProgress.Width = 225;
                 pProgress.Height = 12;
                 StatusPanel.Controls.Add(pProgress);
             }
 
-            if (Height < 240 + 40*_threadCount)
+            if (Height < 325 + 30 * _threadCount)
             {
-                Height = 240 + 40*_threadCount;
+                Height = 325 + 30 * _threadCount;
             }
         }
 
@@ -125,17 +142,12 @@ namespace TrrntZipUI
         {
             Trrntzip.Program.ForceReZip = chkForce.Checked;
             Trrntzip.Program.CheckOnly = !chkFix.Checked;
-            Trrntzip.Program.InZip = (zipType) cboInType.SelectedIndex;
-            Trrntzip.Program.OutZip = (zipType) cboOutType.SelectedIndex;
-            AppSettings.AddUpdateAppSettings("Force", chkForce.Checked.ToString());
-            AppSettings.AddUpdateAppSettings("Fix", chkFix.Checked.ToString());
-            AppSettings.AddUpdateAppSettings("InZip", cboInType.SelectedIndex.ToString());
-            AppSettings.AddUpdateAppSettings("OutZip", cboOutType.SelectedIndex.ToString());
-
+            Trrntzip.Program.InZip = (zipType)cboInType.SelectedIndex;
+            Trrntzip.Program.OutZip = (zipType)cboOutType.SelectedIndex;
 
             StartWorking();
 
-            string[] file = (string[]) e.Data.GetData(DataFormats.FileDrop);
+            string[] file = (string[])e.Data.GetData(DataFormats.FileDrop);
             _fileList.Clear();
 
             foreach (string t in file)
@@ -164,9 +176,6 @@ namespace TrrntZipUI
                 StopWorking();
                 return;
             }
-
-            _sw.Reset();
-            _sw.Start();
             ProcessZipsStartThreads();
         }
 
@@ -174,7 +183,7 @@ namespace TrrntZipUI
         {
             string extn = Path.GetExtension(filename);
             extn = extn.ToLower();
-            if ((extn != ".zip") && (extn != ".7z") && (extn!=".iso"))
+            if ((extn != ".zip") && (extn != ".7z") && (extn != ".iso"))
             {
                 return;
             }
@@ -223,6 +232,7 @@ namespace TrrntZipUI
             cboOutType.Enabled = false;
             chkForce.Enabled = false;
             chkFix.Enabled = false;
+            tbProccessors.Enabled = false;
             Application.DoEvents();
         }
 
@@ -234,6 +244,7 @@ namespace TrrntZipUI
             cboOutType.Enabled = true;
             chkForce.Enabled = true;
             chkFix.Enabled = true;
+            tbProccessors.Enabled = true;
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
@@ -292,8 +303,6 @@ namespace TrrntZipUI
             _threadLabel[processId].Text = Path.GetFileName(filename);
             if (_threadsBusyCount == 0)
             {
-                _sw.Stop();
-                lblComplete.Text = _sw.Elapsed + Environment.NewLine;
                 StopWorking();
             }
 
@@ -304,7 +313,7 @@ namespace TrrntZipUI
                 dataGrid.Rows[topfileId].Cells[1].Value = "Processing....(" + processId + ")";
             }
 
-            topfileId -= (int) ((double) dataGrid.Height/dataGrid.Rows[0].Height*0.8);
+            topfileId -= (int)((double)dataGrid.Height / dataGrid.Rows[0].Height * 0.8);
             if (topfileId > dataGrid.Rows.Count)
             {
                 topfileId = dataGrid.Rows.Count - 1;
@@ -361,7 +370,45 @@ namespace TrrntZipUI
             Process.Start("http://paypal.me/romvault");
         }
 
-        private delegate void StatusInvoker(int fileId, int processId, string filename);
+
+
+        private void tbProccessors_ValueChanged(object sender, EventArgs e)
+        {
+            if (UiUpdate)
+                return;
+
+            AppSettings.AddUpdateAppSettings("ProcCount", tbProccessors.Value.ToString());
+            SetUpUiThreads();
+        }
+
+        private void chkFix_CheckedChanged(object sender, EventArgs e)
+        {
+            if (UiUpdate)
+                return;
+            AppSettings.AddUpdateAppSettings("Fix", chkFix.Checked.ToString());
+        }
+
+        private void chkForce_CheckedChanged(object sender, EventArgs e)
+        {
+            if (UiUpdate)
+                return;
+            AppSettings.AddUpdateAppSettings("Force", chkForce.Checked.ToString());
+        }
+
+        private void cboInType_TextChanged(object sender, EventArgs e)
+        {
+            if (UiUpdate)
+                return;
+            AppSettings.AddUpdateAppSettings("InZip", cboInType.SelectedIndex.ToString());
+        }
+
+        private void cboOutType_TextChanged(object sender, EventArgs e)
+        {
+            if (UiUpdate)
+                return;
+            AppSettings.AddUpdateAppSettings("OutZip", cboOutType.SelectedIndex.ToString());
+        }
+
     }
 
     public class Counter

@@ -21,7 +21,7 @@ namespace DATReader.DatReader
             using (DatFileLoader dfl = new DatFileLoader())
             {
                 datHeader = new DatHeader { BaseDir = new DatDir(DatFileType.UnSet) };
-                int errorCode = dfl.LoadDat(strFilename);
+                int errorCode = dfl.LoadDat(strFilename, DatRead.Enc);
                 if (errorCode != 0)
                 {
                     _errorReport?.Invoke(strFilename, new Win32Exception(errorCode).Message);
@@ -90,6 +90,10 @@ namespace DATReader.DatReader
                     {
                         return false;
                     }
+                    break;
+                case "#": // comments
+
+                    dfl.GnRest();
                     break;
                 default:
                     _errorReport?.Invoke(dfl.Filename, "Error Keyword " + dfl.Next + " not know in dir, on line " + dfl.LineNumber);
@@ -304,42 +308,20 @@ namespace DATReader.DatReader
                     case "history":
                         dGame.History = dfl.GnRest();
                         break;
+                    case "isdevice":
+                        dGame.IsDevice = dfl.GnRest();
+                        break;
                     case "serial":
-                        dfl.GnRest();
-                        break;
                     case "rebuildto":
-                        dfl.GnRest();
-                        break;
-
                     case "sample":
-                        dfl.GnRest();
-                        break;
                     case "biosset":
-                        dfl.GnRest();
-                        break;
-
                     case "chip":
-                        dfl.GnRest();
-                        break;
                     case "video":
-                        dfl.GnRest();
-                        break;
                     case "sound":
-                        dfl.GnRest();
-                        break;
                     case "input":
-                        dfl.GnRest();
-                        break;
                     case "dipswitch":
-                        dfl.GnRest();
-                        break;
                     case "driver":
-                        dfl.GnRest();
-                        break;
                     case "display":
-                        dfl.GnRest();
-                        break;
-
                     case "comment":
                     case "releaseyear":
                     case "releasemonth":
@@ -351,6 +333,11 @@ namespace DATReader.DatReader
                     case "users":
                     case "version":
                     case "license":
+                    case "device_ref":
+                    case "driverstatus":
+                    case "ismechanical":
+                    case "#": // comments
+
                         dfl.GnRest();
                         break;
 

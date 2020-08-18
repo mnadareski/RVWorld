@@ -73,6 +73,8 @@ namespace FileHeaderReader
                     fileResults.FileStatus = ZipReturn.ZipGood;
                     fileResults.Size = 0;
                     fileResults.CRC = new byte[] { 0, 0, 0, 0 };
+                    fileResults.SHA1 = new byte[] { 0xda, 0x39, 0xa3, 0xee, 0x5e, 0x6b, 0x4b, 0x0d, 0x32, 0x55, 0xbf, 0xef, 0x95, 0x60, 0x18, 0x90, 0xaf, 0xd8, 0x07, 0x09 };
+                    fileResults.MD5 = new byte[] { 0xd4, 0x1d, 0x8c, 0xd9, 0x8f, 0x00, 0xb2, 0x04, 0xe9, 0x80, 0x09, 0x98, 0xec, 0xf8, 0x42, 0x7e };
 
                     lstFileResults.Add(fileResults);
                     continue;
@@ -155,7 +157,9 @@ namespace FileHeaderReader
                 int maxHeaderSize = 128;
                 long sizetogo = (long)totalSize;
                 int sizenow = maxHeaderSize < sizetogo ? maxHeaderSize : (int)sizetogo;
-                inStream.Read(_buffer0, 0, sizenow);
+                if (sizenow>0)
+                    inStream.Read(_buffer0, 0, sizenow);
+    
                 fileResults.HeaderFileType = FileHeaderReader.GetType(_buffer0, sizenow, out int actualHeaderSize);
 
 
@@ -270,7 +274,9 @@ namespace FileHeaderReader
 
                 // Pre load the first buffer0
                 int sizeNext = sizetogo > Buffersize ? Buffersize : (int)sizetogo;
-                inStream.Read(_buffer0, 0, sizeNext);
+                if(sizeNext>0)
+                    inStream.Read(_buffer0, 0, sizeNext);
+
                 int sizebuffer = sizeNext;
                 sizetogo -= sizeNext;
                 bool whichBuffer = true;

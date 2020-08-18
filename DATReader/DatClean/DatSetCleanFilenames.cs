@@ -28,7 +28,7 @@ namespace DATReader.DatClean
                 return;
 
             string retName = name;
-            retName = retName.TrimStart();
+            retName = retName.TrimStart(new[] { ' ' });
             retName = retName.TrimEnd(new[] { '.', ' ' });
             retName = retName.Replace("/", "\\");
             retName = retName.Replace("\\ ", "\\");
@@ -38,7 +38,7 @@ namespace DATReader.DatClean
             for (int i = 0; i < charName.Length; i++)
             {
                 int c = charName[i];
-                if (c == ':' || c == '*' || c == '?' || c == '<' || c == '>' || c == '|' || c < 32)
+                if (c == ':' || c == '*' || c == '?' || c == '<' || c == '>' || c == '|' || c=='"' || c < 32)
                     charName[i] = '-';
             }
             db.Name = new string(charName);

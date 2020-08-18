@@ -6,15 +6,22 @@ namespace DATReader.DatClean
 {
     public static partial class DatClean
     {
-        public static void MakeDatSingleLevel(DatHeader tDatHeader)
+        public static void MakeDatSingleLevel(DatHeader tDatHeader, bool useDescription, bool removeSubDir)
         {
             DatBase[] db = tDatHeader.BaseDir.ToArray();
             tDatHeader.Dir = "noautodir";
 
+            string rootDirName = "";
+            if (string.IsNullOrEmpty(rootDirName) && useDescription && !string.IsNullOrWhiteSpace(tDatHeader.Description))
+                rootDirName = tDatHeader.Description;
+            if (string.IsNullOrEmpty(rootDirName))
+                rootDirName = tDatHeader.Name;
+
             tDatHeader.BaseDir.ChildrenClear();
+
             DatDir root = new DatDir(DatFileType.UnSet)
             {
-                Name = tDatHeader.Name,
+                Name = rootDirName,
                 DGame = new DatGame { Description = tDatHeader.Description }
             };
             tDatHeader.BaseDir.ChildAdd(root);
@@ -27,7 +34,8 @@ namespace DATReader.DatClean
                 DatBase[] dbr = romSet.ToArray();
                 foreach (DatBase rom in dbr)
                 {
-                    rom.Name = dirName + "\\" + rom.Name;
+                    if (!removeSubDir)
+                        rom.Name = dirName + "\\" + rom.Name;
                     root.ChildAdd(rom);
                 }
             }
@@ -74,13 +82,14 @@ namespace DATReader.DatClean
                                 dirFind = (DatDir)dDir.Child(index);
                             }
 
-                            dirFind.ChildAdd(db);
+                            if (part1.Length > 0)
+                                dirFind.ChildAdd(db);
                             continue;
                         }
                     }
                     dDir.ChildAdd(db);
                 }
-                
+
                 arrDir = dDir.ToArray();
             }
 

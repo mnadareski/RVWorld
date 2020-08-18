@@ -9,10 +9,10 @@ namespace DATReader.DatWriter
         public void WriteDat(string strFilename, DatHeader datHeader, bool newStyle = false)
         {
             string dir = Path.GetDirectoryName(strFilename);
-            if (!Directory.Exists(dir))
+            if (!string.IsNullOrWhiteSpace(dir) && !Directory.Exists(dir))
                 System.IO.Directory.CreateDirectory(dir);
 
-            using (dsw sw = new dsw(strFilename))
+            using (DatStreamWriter sw = new DatStreamWriter(strFilename))
             {
                 sw.WriteLine("<?xml version=\"1.0\"?>");
                 if (newStyle)
@@ -31,7 +31,7 @@ namespace DATReader.DatWriter
             }
         }
 
-        private void WriteHeader(dsw sw, DatHeader datHeader)
+        private void WriteHeader(DatStreamWriter sw, DatHeader datHeader)
         {
             sw.WriteLine("<header>", 1);
             sw.WriteNode("name", datHeader.Name);
@@ -53,7 +53,7 @@ namespace DATReader.DatWriter
             sw.WriteLine("</header>", -1);
         }
 
-        private void writeBase(dsw sw, DatDir baseDirIn, bool newStyle)
+        private void writeBase(DatStreamWriter sw, DatDir baseDirIn, bool newStyle)
         {
             DatBase[] dirChildren = baseDirIn.ToArray();
 
@@ -67,7 +67,7 @@ namespace DATReader.DatWriter
                     if (baseDir.DGame != null)
                     {
                         DatGame g = baseDir.DGame;
-                        sw.Write(newStyle ? @"<zip" : @"<game");
+                        sw.Write(newStyle ? @"<set" : @"<game");
 
                         sw.WriteItem("name", baseDir.Name);
 
@@ -80,6 +80,14 @@ namespace DATReader.DatWriter
                             else if (baseDir.DatFileType == DatFileType.DirRVZip)
                             {
                                 sw.WriteItem("type", "rvzip");
+                            }
+                            else if (baseDir.DatFileType == DatFileType.Dir7Zip)
+                            {
+                                sw.WriteItem("type", "7zip");
+                            }
+                            else if (baseDir.DatFileType == DatFileType.Dir)
+                            {
+                                sw.WriteItem("type", "dir");
                             }
                         }
 
@@ -118,7 +126,7 @@ namespace DATReader.DatWriter
                         }
 
                         writeBase(sw, baseDir, newStyle);
-                        sw.WriteLine(newStyle ? @"</zip>" : @"</game>", -1);
+                        sw.WriteLine(newStyle ? @"</set>" : @"</game>", -1);
                     }
                     else
                     {
@@ -136,8 +144,12 @@ namespace DATReader.DatWriter
                         sw.Write(@"<dir");
                         sw.WriteItem("name", baseRom.Name.Substring(0, baseRom.Name.Length - 1));
                         //sw.WriteItem("merge", baseRom.Merge);
-                        if (baseRom.Date != "1996/12/24 23:32:00")
-                            sw.WriteItem("date", baseRom.Date);
+                        if (baseRom.DateModified != "1996/12/24 23:32:00")
+                            sw.WriteItem("date", baseRom.DateModified);
+                        if (baseRom.DateCreated != null)
+                            sw.WriteItem("cDate", baseRom.DateCreated);
+                        if (baseRom.DateAccessed!=null)
+                            sw.WriteItem("aDate",baseRom.DateAccessed);
                         sw.WriteEnd("/>");
                     }
                     else
@@ -149,8 +161,12 @@ namespace DATReader.DatWriter
                         sw.WriteItem("crc", baseRom.CRC);
                         sw.WriteItem("sha1", baseRom.SHA1);
                         sw.WriteItem("md5", baseRom.MD5);
-                        if (baseRom.Date != "1996/12/24 23:32:00")
-                            sw.WriteItem("date", baseRom.Date);
+                        if (baseRom.DateModified != "1996/12/24 23:32:00")
+                            sw.WriteItem("date", baseRom.DateModified);
+                        if (baseRom.DateCreated != null)
+                            sw.WriteItem("cDate", baseRom.DateCreated);
+                        if (baseRom.DateAccessed != null)
+                            sw.WriteItem("aDate", baseRom.DateAccessed);
                         if (baseRom.Status != null && baseRom.Status.ToLower() != "good")
                             sw.WriteItem("status", baseRom.Status);
                         sw.WriteEnd("/>");
@@ -176,12 +192,12 @@ namespace DATReader.DatWriter
             return b == null ? "" : BitConverter.ToString(b).ToLower().Replace("-", "");
         }
 
-        private class dsw : IDisposable
+        private class DatStreamWriter : IDisposable
         {
-            private int _tabDepth = 0;
+            private int _tabDepth;
             private string _tabString = "";
             private readonly System.IO.StreamWriter _sw;
-            public dsw(string path)
+            public DatStreamWriter(string path)
             {
                 _sw = File.CreateText(path);
             }

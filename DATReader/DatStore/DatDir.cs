@@ -25,6 +25,13 @@ namespace DATReader.DatStore
             return _children[index];
         }
 
+        public DatBase ChildSorted(int index)
+        {
+            return DatFileType==DatFileType.UnSet ?
+                _children[_childrenNameIndex[index]] :
+                _children[index];
+        }
+
         public DatBase[] ToArray()
         {
             return _children.ToArray();
@@ -35,10 +42,10 @@ namespace DATReader.DatStore
             int index;
             if (DatFileType == DatFileType.UnSet)
             {
-                ChildNameBinarySearch(datItem, true, false, out int indexsearch);
+                ChildNameBinarySearch(datItem, true, false, out int indexSearch);
                 _children.Add(datItem);
                 index = _children.Count - 1;
-                _childrenNameIndex.Insert(indexsearch, index);
+                _childrenNameIndex.Insert(indexSearch, index);
                 return index;
             }
 
@@ -171,18 +178,18 @@ namespace DATReader.DatStore
             {
                 case DatFileType.UnSet:
                     {
-                        int res = Math.Sign(string.Compare(lName.Name, dBase.Name, StringComparison.Ordinal));
+                        int res = Math.Sign(string.Compare(lName.Name, dBase.Name, StringComparison.InvariantCulture));
                         if (res != 0)
                             return res;
                         break;
 
                     }
-                case DatFileType.DirRVZip:
 
                 case DatFileType.Dir:
+                case DatFileType.DirRVZip:
                 case DatFileType.DirTorrentZip:
                     {
-                        int res = Math.Sign(DatSort.TrrntZipStringCompare(lName.Name, dBase.Name));
+                        int res = Math.Sign(DatSort.TrrntZipStringCompareCase(lName.Name, dBase.Name));
                         if (res != 0)
                             return res;
                         break;
