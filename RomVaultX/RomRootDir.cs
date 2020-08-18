@@ -9,19 +9,17 @@ namespace RomVaultX
 
         static RomRootDir()
         {
+            rootDirs = new string[256];
+            for (int i = 0; i < 256; i++)
+                rootDirs[i] = @"RomRoot\";
+
             if (!System.IO.File.Exists("DirPaths.conf"))
                 return;
+
             string text = System.IO.File.ReadAllText(@"DirPaths.conf");
 
             text = text.Replace("\r", "");
-            string[] rules= text.Split('\n');
-
-            rootDirs=new string[256];
-            for (int i = 0; i < 256; i++)
-            {
-                rootDirs[i] = @"RomRoot\";
-            }
-
+            string[] rules = text.Split('\n');
 
             foreach (string rule in rules)
             {
@@ -33,7 +31,7 @@ namespace RomVaultX
                 string pEnd = rule.Substring(3, 2);
                 string ps1 = rule.Substring(5, 1);
                 string pDir = rule.Substring(6);
-                if (ps0!="-")
+                if (ps0 != "-")
                     continue;
                 if (ps1 != "|")
                     continue;
