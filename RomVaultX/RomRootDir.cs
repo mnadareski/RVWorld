@@ -55,7 +55,9 @@ namespace RomVaultX
                 depth = 2;
 
             if (depth < 0)
-                return null;
+                depth = 0;
+            else if (depth > 4)
+                depth = 4;
 
             string path = GetRootDir(sha1[0]);
             for (int i = 0; i < depth; i++)
